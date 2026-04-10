@@ -1,389 +1,350 @@
 import asyncio
 import logging
 import re
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, FSInputFile
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from datetime import datetime, timedelta
 from typing import Dict
-import io
-import os
-aqw="8081316889:AAF2W-kI2SMz14YEThfC3_G7-_08lp2FWPA"
+
+API_TOKEN = "8081316889:AAF2W-kI2SMz14YEThfC3_G7-_08lp2FWPA"
+
 logging.basicConfig(level=logging.INFO)
-qwe=logging.getLogger(__name__)
-class rew(StatesGroup):
-    rty=State()
-    tyu=State()
-    yui=State()
-asd={
+logger = logging.getLogger(__name__)
+
+class WaterStates(StatesGroup):
+    waiting_for_weight = State()
+    waiting_for_drink_amount = State()
+    waiting_for_reminder_time = State()
+
+DRINKS = {
     "вода": 1.0, "чай": 0.9, "кава": 0.5,
     "кава з молоком": 0.6, "сік": 0.8, "молоко": 0.7,
     "лимонад": 0.4, "кола": 0.3
 }
-class zxc:
+
+class UserData:
     def __init__(self):
-        self.vbn=None
-        self.mnb=2000
-        self.nbv=0
-        self.bvc=0
-        self.cxz=[]
-        self.xza={}
-        self.zxcx=datetime.now().strftime('%Y-%m-%d')
-        self.asdd=False
-        self.qwer=0
-        self.erty=[]
-        self.tyui=None
-        self.yuio=False
-    def uiop(self):
-        asdfg=datetime.now().strftime('%Y-%m-%d')
-        if self.zxcx!=asdfg:
-            self.cxz.append(f"{self.zxcx}: {self.nbv}")
-            self.xza[self.zxcx]=self.nbv
-            if self.nbv>=self.mnb:
-                self.qwer+=1
-                self.hjkl()
+        self.weight = None
+        self.daily_goal = 2000
+        self.consumed = 0
+        self.total = 0
+        self.history = []
+        self.daily_history = {}
+        self.last_date = datetime.now().strftime('%Y-%m-%d')
+        self.setup_completed = False
+        self.streak = 0
+        self.achievements = []
+        self.reminder_time = None
+        self.reminder_enabled = False
+
+    def check_new_day(self):
+        today = datetime.now().strftime('%Y-%m-%d')
+        if self.last_date != today:
+            self.history.append(f"{self.last_date}: {self.consumed}")
+            self.daily_history[self.last_date] = self.consumed
+            if self.consumed >= self.daily_goal:
+                self.streak += 1
+                self.check_achievements()
             else:
-                self.qwer=0
-            self.nbv=0
-            self.zxcx=asdfg
-    def zxcv(self,qw,et,rt):
-        yt=et*rt
-        self.nbv+=yt
-        self.bvc+=yt
-    def hjkl(self):
-        tyuio={
-            3:"3 дні поспіль 🥉",
-            7:"7 днів поспіль 🥈",
-            14:"14 днів поспіль 🥇",
-            30:"30 днів поспіль 🏆"
+                self.streak = 0
+            self.consumed = 0
+            self.last_date = today
+
+    def add_drink(self, name, amount, coef):
+        water = amount * coef
+        self.consumed += water
+        self.total += water
+
+    def check_achievements(self):
+        achievements_map = {
+            3: "3 дні поспіль 🥉",
+            7: "7 днів поспіль 🥈",
+            14: "14 днів поспіль 🥇",
+            30: "30 днів поспіль 🏆"
         }
-        if self.qwer in tyuio and tyuio[self.qwer] not in self.erty:
-            self.erty.append(tyuio[self.qwer])
-            return tyuio[self.qwer]
+        if self.streak in achievements_map and achievements_map[self.streak] not in self.achievements:
+            self.achievements.append(achievements_map[self.streak])
+            return achievements_map[self.streak]
         return None
-    def ghjk(self):
-        if not self.erty:
+
+    def get_achievements(self):
+        if not self.achievements:
             return "Поки немає досягнень"
-        return "\n".join(self.erty)
-bnm=Bot(token=aqw)
-vbn=Dispatcher(storage=MemoryStorage())
-nmnb={}
-dfg={}
-sdf={}
-def cvb(bnmn):
-    if bnmn not in nmnb:
-        nmnb[bnmn]=zxc()
-    nmnb[bnmn].uiop()
-    return nmnb[bnmn]
-def plk(wer):
-    if wer<30:
-        wer=30
-    if wer>200:
-        wer=200
-    return int(wer*33)
-def qaz(edc):
-    if not edc.xza:
-        return None
-    rfv=[]
-    tgb=[]
-    yhn=datetime.now()
-    for ujm in range(6,-1,-1):
-        ikm=(yhn-timedelta(days=ujm)).strftime('%Y-%m-%d')
-        rfv.append(ikm)
-        tgb.append(edc.xza.get(ikm,0))
-    plt.figure(figsize=(10,6))
-    plt.bar(rfv,tgb,color='#4CAF50',alpha=0.7)
-    plt.axhline(y=edc.mnb,color='red',linestyle='--',label=f'Норма ({edc.mnb} мл)')
-    plt.xlabel('Дата')
-    plt.ylabel('Випито води (мл)')
-    plt.title('Ваша статистика споживання води')
-    plt.xticks(rotation=45)
-    plt.legend()
-    plt.tight_layout()
-    olp=io.BytesIO()
-    plt.savefig(olp,format='png')
-    olp.seek(0)
-    plt.close()
-    return olp
-async def mko(plo):
+        return "\n".join(self.achievements)
+
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(storage=MemoryStorage())
+users = {}
+pending_drinks = {}
+reminder_tasks = {}
+
+def get_user(uid):
+    if uid not in users:
+        users[uid] = UserData()
+    users[uid].check_new_day()
+    return users[uid]
+
+def calculate_goal(weight):
+    if weight < 30:
+        weight = 30
+    if weight > 400:
+        weight = 400
+    return int(weight * 33)
+
+async def send_reminder(user_id):
     await asyncio.sleep(1)
     while True:
-        iuy=cvb(plo)
-        if iuy.yuio and iuy.tyui:
-            nhy=datetime.now().strftime("%H:%M")
-            if nhy==iuy.tyui:
-                await bnm.send_message(plo,f"Нагадування! Час випити води! Поточна норма: {iuy.nbv:.0f}/{iuy.mnb} мл 💧")
+        user = get_user(user_id)
+        if user.reminder_enabled and user.reminder_time:
+            now = datetime.now().strftime("%H:%M")
+            if now == user.reminder_time:
+                await bot.send_message(user_id, f"Нагадування! Час випити води! Поточна норма: {user.consumed:.0f}/{user.daily_goal} мл 💧")
                 await asyncio.sleep(60)
         await asyncio.sleep(30)
-def bgv(jkl):
-    if jkl in sdf:
-        sdf[jkl].cancel()
-    sdf[jkl]=asyncio.create_task(mko(jkl))
-def qweasd():
+
+def start_reminder(user_id):
+    if user_id in reminder_tasks:
+        reminder_tasks[user_id].cancel()
+    reminder_tasks[user_id] = asyncio.create_task(send_reminder(user_id))
+
+def main_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="250 💧",callback_data="zxc1"),
-         InlineKeyboardButton(text="500 💧",callback_data="zxc2")],
-        [InlineKeyboardButton(text="1000 💧",callback_data="zxc3"),
-         InlineKeyboardButton(text="2000 💧",callback_data="zxc4")],
-        [InlineKeyboardButton(text="Напій 🥤",callback_data="zxc5")],
-        [InlineKeyboardButton(text="Статистика 📊",callback_data="zxc6"),
-         InlineKeyboardButton(text="Досягнення 🏆",callback_data="zxc7")],
-        [InlineKeyboardButton(text="Нагадування ⏰",callback_data="zxc8"),
-         InlineKeyboardButton(text="Допомога ℹ️",callback_data="zxc9")]
+        [InlineKeyboardButton(text="250 💧", callback_data="w250"),
+         InlineKeyboardButton(text="500 💧", callback_data="w500")],
+        [InlineKeyboardButton(text="1000 💧", callback_data="w1000"),
+         InlineKeyboardButton(text="2000 💧", callback_data="w2000")],
+        [InlineKeyboardButton(text="Напій 🥤", callback_data="drink")],
+        [InlineKeyboardButton(text="Статистика 📊", callback_data="stats"),
+         InlineKeyboardButton(text="Досягнення 🏆", callback_data="achievements")],
+        [InlineKeyboardButton(text="Нагадування ⏰", callback_data="reminder"),
+         InlineKeyboardButton(text="Допомога ℹ️", callback_data="help")]
     ])
-def rtyuio():
+
+def drinks_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Вода 💧",callback_data="plm_вода"),
-         InlineKeyboardButton(text="Чай 🍵",callback_data="plm_чай")],
-        [InlineKeyboardButton(text="Кава ☕",callback_data="plm_кава"),
-         InlineKeyboardButton(text="Кава з молоком ☕",callback_data="plm_кава з молоком")],
-        [InlineKeyboardButton(text="Сік 🧃",callback_data="plm_сік"),
-         InlineKeyboardButton(text="Молоко 🥛",callback_data="plm_молоко")],
-        [InlineKeyboardButton(text="Лимонад 🥤",callback_data="plm_лимонад"),
-         InlineKeyboardButton(text="Кола 🥤",callback_data="plm_кола")],
-        [InlineKeyboardButton(text="Назад ◀️",callback_data="wsx")]
+        [InlineKeyboardButton(text="Вода 💧", callback_data="drink_вода"),
+         InlineKeyboardButton(text="Чай 🍵", callback_data="drink_чай")],
+        [InlineKeyboardButton(text="Кава ☕", callback_data="drink_кава"),
+         InlineKeyboardButton(text="Кава з молоком ☕", callback_data="drink_кава з молоком")],
+        [InlineKeyboardButton(text="Сік 🧃", callback_data="drink_сік"),
+         InlineKeyboardButton(text="Молоко 🥛", callback_data="drink_молоко")],
+        [InlineKeyboardButton(text="Лимонад 🥤", callback_data="drink_лимонад"),
+         InlineKeyboardButton(text="Кола 🥤", callback_data="drink_кола")],
+        [InlineKeyboardButton(text="Назад ◀️", callback_data="back")]
     ])
-@vbn.message(Command("start"))
-async def asdfgh(msg:types.Message,state:FSMContext):
+
+@dp.message(Command("start"))
+async def start(msg: types.Message, state: FSMContext):
     await state.clear()
-    user=cvb(msg.from_user.id)
+    user = get_user(msg.from_user.id)
     await msg.answer("Вітаю! Я бот для відстеження водного балансу! 💧\n\nВведіть вашу вагу:")
-    if not user.vbn:
-        await state.set_state(rew.rty)
+    if not user.weight:
+        await state.set_state(WaterStates.waiting_for_weight)
     else:
-        await msg.answer("Головне меню 📋",reply_markup=qweasd())
-@vbn.message(rew.rty)
-async def qwerty(msg:types.Message,state:FSMContext):
-    user=cvb(msg.from_user.id)
+        await msg.answer("Головне меню 📋", reply_markup=main_keyboard())
+
+@dp.message(WaterStates.waiting_for_weight)
+async def get_weight(msg: types.Message, state: FSMContext):
+    user = get_user(msg.from_user.id)
     try:
-        w=float(msg.text)
-        if w<30:
+        w = float(msg.text)
+        if w < 30:
             await msg.answer("Вага не може бути менше 30 кг! Введіть реальну вагу ❌")
             return
-        if w>400:
+        if w > 200:
             await msg.answer("Вага не може бути більше 400 кг! Введіть реальну вагу ❌")
             return
-        user.vbn=w
-        user.mnb=plk(w)
-        user.asdd=True
+        user.weight = w
+        user.daily_goal = calculate_goal(w)
+        user.setup_completed = True
         await state.clear()
-        await msg.answer(f"Вага збережена: {w} кг ✅\nДенна норма: {user.mnb} мл 💧\n\nГоловне меню 📋",reply_markup=qweasd())
+        await msg.answer(f"Вага збережена: {w} кг ✅\nДенна норма: {user.daily_goal} мл 💧\n\nГоловне меню 📋", reply_markup=main_keyboard())
     except:
         await msg.answer("Помилка! Введіть число ❌")
-@vbn.message(rew.tyu)
-async def yuiop(msg:types.Message,state:FSMContext):
-    user=cvb(msg.from_user.id)
-    drink_info=dfg.get(msg.from_user.id)
+
+@dp.message(WaterStates.waiting_for_drink_amount)
+async def get_drink_amount(msg: types.Message, state: FSMContext):
+    user = get_user(msg.from_user.id)
+    drink_info = pending_drinks.get(msg.from_user.id)
     if not drink_info:
         await state.clear()
-        await msg.answer("Будь ласка, оберіть напій з меню 🥤",reply_markup=qweasd())
+        await msg.answer("Будь ласка, оберіть напій з меню 🥤", reply_markup=main_keyboard())
         return
     try:
-        amount=float(msg.text)
-        if amount<=0:
+        amount = float(msg.text)
+        if amount <= 0:
             await msg.answer("Кількість має бути більше 0 мл ❌")
             return
-        if amount>2000:
+        if amount > 2000:
             await msg.answer("Забагато! Максимум 2000 мл за раз ❌")
             return
-        name=drink_info["name"]
-        coef=drink_info["coef"]
-        user.zxcv(name,amount,coef)
-        water_amount=amount*coef
+        name = drink_info["name"]
+        coef = drink_info["coef"]
+        user.add_drink(name, amount, coef)
+        water_amount = amount * coef
         await state.clear()
-        if msg.from_user.id in dfg:
-            del dfg[msg.from_user.id]
-        await msg.answer(f"Додано: {name} ✅\n{amount} мл 🥤 → {water_amount:.0f} мл води 💧\n{user.nbv:.0f}/{user.mnb} мл 💧",reply_markup=qweasd())
+        if msg.from_user.id in pending_drinks:
+            del pending_drinks[msg.from_user.id]
+        await msg.answer(f"Додано: {name} ✅\n{amount} мл 🥤 → {water_amount:.0f} мл води 💧\n{user.consumed:.0f}/{user.daily_goal} мл 💧", reply_markup=main_keyboard())
     except:
         await msg.answer("Помилка! Введіть число ❌")
-@vbn.message(rew.yui)
-async def asdfg(msg:types.Message,state:FSMContext):
-    user=cvb(msg.from_user.id)
+
+@dp.message(WaterStates.waiting_for_reminder_time)
+async def get_reminder_time(msg: types.Message, state: FSMContext):
+    user = get_user(msg.from_user.id)
     try:
-        time_str=msg.text.strip()
-        if re.match(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$',time_str):
-            user.tyui=time_str
-            user.yuio=True
-            bgv(msg.from_user.id)
+        time_str = msg.text.strip()
+        if re.match(r'^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$', time_str):
+            user.reminder_time = time_str
+            user.reminder_enabled = True
+            start_reminder(msg.from_user.id)
             await state.clear()
-            await msg.answer(f"Нагадування встановлено на {time_str} ✅\nЯ буду нагадувати вам пити воду! ⏰",reply_markup=qweasd())
+            await msg.answer(f"Нагадування встановлено на {time_str} ✅\nЯ буду нагадувати вам пити воду! ⏰", reply_markup=main_keyboard())
         else:
             await msg.answer("Невірний формат! Введіть час у форматі ГГ:ХХ ❌")
     except:
         await msg.answer("Помилка! Введіть час у форматі ГГ:ХХ ❌")
-@vbn.message()
-async def zxcvb(msg:types.Message):
-    user=cvb(msg.from_user.id)
-    text=msg.text.lower()
-    found_drink=None
-    found_amount=None
-    nums=re.findall(r'\d+',text)
+
+@dp.message()
+async def handle_text(msg: types.Message):
+    user = get_user(msg.from_user.id)
+    text = msg.text.lower()
+    found_drink = None
+    found_amount = None
+    nums = re.findall(r'\d+', text)
     if nums:
-        found_amount=float(nums[0])
-    for drink in asd:
+        found_amount = float(nums[0])
+    for drink in DRINKS:
         if drink in text:
-            found_drink=drink
+            found_drink = drink
             break
     if found_drink and found_amount:
-        if found_amount>2000:
+        if found_amount > 2000:
             await msg.answer("Забагато! Максимум 2000 мл за раз ❌")
             return
-        coef=asd[found_drink]
-        user.zxcv(found_drink,found_amount,coef)
-        water_amount=found_amount*coef
-        await msg.answer(f"Додано: {found_drink} ✅\n{found_amount} мл 🥤 → {water_amount:.0f} мл води 💧\n{user.nbv:.0f}/{user.mnb} мл 💧")
+        coef = DRINKS[found_drink]
+        user.add_drink(found_drink, found_amount, coef)
+        water_amount = found_amount * coef
+        await msg.answer(f"Додано: {found_drink} ✅\n{found_amount} мл 🥤 → {water_amount:.0f} мл води 💧\n{user.consumed:.0f}/{user.daily_goal} мл 💧")
     elif nums and not found_drink:
-        amount=float(nums[0])
-        if amount>2000:
+        amount = float(nums[0])
+        if amount > 2000:
             await msg.answer("Забагато! Максимум 2000 мл за раз ❌")
             return
-        user.zxcv("вода",amount,1)
-        await msg.answer(f"Додано {amount} мл води ✅\n{user.nbv:.0f}/{user.mnb} мл 💧")
-@vbn.callback_query(F.data=="zxc1")
-async def qazwsx(cb:types.CallbackQuery):
-    user=cvb(cb.from_user.id)
-    amount=250
-    user.zxcv("вода",amount,1)
+        user.add_drink("вода", amount, 1)
+        await msg.answer(f"Додано {amount} мл води ✅\n{user.consumed:.0f}/{user.daily_goal} мл 💧")
+
+@dp.callback_query(F.data.startswith("w"))
+async def water(cb: types.CallbackQuery):
+    user = get_user(cb.from_user.id)
+    amount = int(cb.data[1:])
+    user.add_drink("вода", amount, 1)
     try:
-        await cb.message.edit_text(f"Додано {amount} мл води ✅\n{user.nbv:.0f}/{user.mnb} мл 💧",reply_markup=qweasd())
+        await cb.message.edit_text(f"Додано {amount} мл води ✅\n{user.consumed:.0f}/{user.daily_goal} мл 💧", reply_markup=main_keyboard())
     except:
-        await cb.message.answer(f"Додано {amount} мл води ✅\n{user.nbv:.0f}/{user.mnb} мл 💧",reply_markup=qweasd())
+        await cb.message.answer(f"Додано {amount} мл води ✅\n{user.consumed:.0f}/{user.daily_goal} мл 💧", reply_markup=main_keyboard())
     await cb.answer()
-@vbn.callback_query(F.data=="zxc2")
-async def edcvfr(cb:types.CallbackQuery):
-    user=cvb(cb.from_user.id)
-    amount=500
-    user.zxcv("вода",amount,1)
+
+@dp.callback_query(F.data == "drink")
+async def choose_drink(cb: types.CallbackQuery):
     try:
-        await cb.message.edit_text(f"Додано {amount} мл води ✅\n{user.nbv:.0f}/{user.mnb} мл 💧",reply_markup=qweasd())
+        await cb.message.edit_text("Виберіть напій 🥤", reply_markup=drinks_keyboard())
     except:
-        await cb.message.answer(f"Додано {amount} мл води ✅\n{user.nbv:.0f}/{user.mnb} мл 💧",reply_markup=qweasd())
+        await cb.message.answer("Виберіть напій 🥤", reply_markup=drinks_keyboard())
     await cb.answer()
-@vbn.callback_query(F.data=="zxc3")
-async def rfvtgb(cb:types.CallbackQuery):
-    user=cvb(cb.from_user.id)
-    amount=1000
-    user.zxcv("вода",amount,1)
-    try:
-        await cb.message.edit_text(f"Додано {amount} мл води ✅\n{user.nbv:.0f}/{user.mnb} мл 💧",reply_markup=qweasd())
-    except:
-        await cb.message.answer(f"Додано {amount} мл води ✅\n{user.nbv:.0f}/{user.mnb} мл 💧",reply_markup=qweasd())
-    await cb.answer()
-@vbn.callback_query(F.data=="zxc4")
-async def yhnujm(cb:types.CallbackQuery):
-    user=cvb(cb.from_user.id)
-    amount=2000
-    user.zxcv("вода",amount,1)
-    try:
-        await cb.message.edit_text(f"Додано {amount} мл води ✅\n{user.nbv:.0f}/{user.mnb} мл 💧",reply_markup=qweasd())
-    except:
-        await cb.message.answer(f"Додано {amount} мл води ✅\n{user.nbv:.0f}/{user.mnb} мл 💧",reply_markup=qweasd())
-    await cb.answer()
-@vbn.callback_query(F.data=="zxc5")
-async def ikolp(cb:types.CallbackQuery):
-    try:
-        await cb.message.edit_text("Виберіть напій 🥤",reply_markup=rtyuio())
-    except:
-        await cb.message.answer("Виберіть напій 🥤",reply_markup=rtyuio())
-    await cb.answer()
-@vbn.callback_query(F.data.startswith("plm_"))
-async def qscwdv(cb:types.CallbackQuery,state:FSMContext):
-    name=cb.data.split("plm_")[1]
-    coef=asd.get(name,1)
-    dfg[cb.from_user.id]={"name":name,"coef":coef}
+
+@dp.callback_query(F.data.startswith("drink_"))
+async def drink_selected(cb: types.CallbackQuery, state: FSMContext):
+    name = cb.data.split("drink_")[1]
+    coef = DRINKS.get(name, 1)
+    pending_drinks[cb.from_user.id] = {"name": name, "coef": coef}
     try:
         await cb.message.edit_text(f"Вибрано: {name} 🥤\n\nСкільки мл ви хочете додати? (максимум 2000 мл)")
     except:
         await cb.message.answer(f"Вибрано: {name} 🥤\n\nСкільки мл ви хочете додати? (максимум 2000 мл)")
-    await state.set_state(rew.tyu)
+    await state.set_state(WaterStates.waiting_for_drink_amount)
     await cb.answer()
-@vbn.callback_query(F.data=="zxc6")
-async def ewrtyu(cb:types.CallbackQuery):
-    user=cvb(cb.from_user.id)
-    percent=(user.nbv/user.mnb)*100 if user.mnb>0 else 0
-    fire_count=user.qwer
-    fire_emoji="🔥"*fire_count if fire_count>0 else ""
-    bar='█'*int(percent//10)+'░'*(10-int(percent//10))
-    img_buf=qaz(user)
-    if img_buf:
-        temp_path=f"temp_{cb.from_user.id}.png"
-        with open(temp_path,"wb") as f:
-            f.write(img_buf.getvalue())
-        photo=FSInputFile(temp_path)
-        try:
-            await cb.message.delete()
-        except:
-            pass
-        await cb.message.answer_photo(photo,caption=f"Статистика за останні 7 днів 📊\n\nСьогодні: {user.nbv:.0f} / {user.mnb} мл 💧\n{bar} {percent:.0f}%\n\nВсього випито: {user.bvc:.0f} мл 🏆\nСерія: {user.qwer} днів {fire_emoji}",reply_markup=qweasd())
-        os.remove(temp_path)
-    else:
-        try:
-            await cb.message.edit_text(f"Статистика за сьогодні 📊\n\nВипито: {user.nbv:.0f} / {user.mnb} мл 💧\n{bar} {percent:.0f}%\n\nВсього випито: {user.bvc:.0f} мл 🏆\nСерія: {user.qwer} днів {fire_emoji}\n\nПоки немає даних для графіка",reply_markup=qweasd())
-        except:
-            await cb.message.answer(f"Статистика за сьогодні 📊\n\nВипито: {user.nbv:.0f} / {user.mnb} мл 💧\n{bar} {percent:.0f}%\n\nВсього випито: {user.bvc:.0f} мл 🏆\nСерія: {user.qwer} днів {fire_emoji}",reply_markup=qweasd())
-    await cb.answer()
-@vbn.callback_query(F.data=="zxc7")
-async def bvcxza(cb:types.CallbackQuery):
-    user=cvb(cb.from_user.id)
-    fire_count=user.qwer
-    fire_emoji="🔥"*fire_count if fire_count>0 else ""
+
+@dp.callback_query(F.data == "stats")
+async def stats(cb: types.CallbackQuery):
+    user = get_user(cb.from_user.id)
+    percent = (user.consumed / user.daily_goal) * 100 if user.daily_goal > 0 else 0
+    fire_count = user.streak
+    fire_emoji = "🔥" * fire_count if fire_count > 0 else ""
+    bar = '█' * int(percent//10) + '░' * (10 - int(percent//10))
     try:
-        await cb.message.edit_text(f"Ваші досягнення 🏆\n\nПоточна серія: {user.qwer} днів {fire_emoji}\n\nОтримані нагороди:\n{user.ghjk()}\n\nЯк отримати:\n• 3 дні → Бронза 🥉\n• 7 днів → Срібло 🥈\n• 14 днів → Золото 🥇\n• 30 днів → Платіна 🏆",reply_markup=qweasd())
+        await cb.message.edit_text(f"Статистика за сьогодні 📊\n\nВипито: {user.consumed:.0f} / {user.daily_goal} мл 💧\n{bar} {percent:.0f}%\n\nВсього випито: {user.total:.0f} мл 🏆\nСерія: {user.streak} днів {fire_emoji}", reply_markup=main_keyboard())
     except:
-        await cb.message.answer(f"Ваші досягнення 🏆\n\nПоточна серія: {user.qwer} днів {fire_emoji}\n\nОтримані нагороди:\n{user.ghjk()}",reply_markup=qweasd())
+        await cb.message.answer(f"Статистика за сьогодні 📊\n\nВипито: {user.consumed:.0f} / {user.daily_goal} мл 💧\n{bar} {percent:.0f}%\n\nВсього випито: {user.total:.0f} мл 🏆\nСерія: {user.streak} днів {fire_emoji}", reply_markup=main_keyboard())
     await cb.answer()
-@vbn.callback_query(F.data=="zxc8")
-async def lkmjnh(cb:types.CallbackQuery,state:FSMContext):
-    user=cvb(cb.from_user.id)
-    status="Увімкнено ✅" if user.yuio else "Вимкнено ❌"
-    time_str=user.tyui if user.tyui else "Не встановлено"
-    keyboard=InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Встановити час ⏰",callback_data="zxc10")],
-        [InlineKeyboardButton(text="Вимкнути нагадування 🔕",callback_data="zxc11")],
-        [InlineKeyboardButton(text="Назад ◀️",callback_data="wsx")]
+
+@dp.callback_query(F.data == "achievements")
+async def achievements(cb: types.CallbackQuery):
+    user = get_user(cb.from_user.id)
+    fire_count = user.streak
+    fire_emoji = "🔥" * fire_count if fire_count > 0 else ""
+    try:
+        await cb.message.edit_text(f"Ваші досягнення 🏆\n\nПоточна серія: {user.streak} днів {fire_emoji}\n\nОтримані нагороди:\n{user.get_achievements()}\n\nЯк отримати:\n• 3 дні → Бронза 🥉\n• 7 днів → Срібло 🥈\n• 14 днів → Золото 🥇\n• 30 днів → Платіна 🏆", reply_markup=main_keyboard())
+    except:
+        await cb.message.answer(f"Ваші досягнення 🏆\n\nПоточна серія: {user.streak} днів {fire_emoji}\n\nОтримані нагороди:\n{user.get_achievements()}", reply_markup=main_keyboard())
+    await cb.answer()
+
+@dp.callback_query(F.data == "reminder")
+async def reminder_settings(cb: types.CallbackQuery, state: FSMContext):
+    user = get_user(cb.from_user.id)
+    status = "Увімкнено ✅" if user.reminder_enabled else "Вимкнено ❌"
+    time_str = user.reminder_time if user.reminder_time else "Не встановлено"
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Встановити час ⏰", callback_data="set_reminder_time")],
+        [InlineKeyboardButton(text="Вимкнути нагадування 🔕", callback_data="disable_reminder")],
+        [InlineKeyboardButton(text="Назад ◀️", callback_data="back")]
     ])
     try:
-        await cb.message.edit_text(f"Налаштування нагадувань ⏰\n\nСтатус: {status}\nЧас: {time_str}\n\nВиберіть дію:",reply_markup=keyboard)
+        await cb.message.edit_text(f"Налаштування нагадувань ⏰\n\nСтатус: {status}\nЧас: {time_str}\n\nВиберіть дію:", reply_markup=keyboard)
     except:
-        await cb.message.answer(f"Налаштування нагадувань ⏰\n\nСтатус: {status}\nЧас: {time_str}\n\nВиберіть дію:",reply_markup=keyboard)
+        await cb.message.answer(f"Налаштування нагадувань ⏰\n\nСтатус: {status}\nЧас: {time_str}\n\nВиберіть дію:", reply_markup=keyboard)
     await cb.answer()
-@vbn.callback_query(F.data=="zxc10")
-async def poiuyt(cb:types.CallbackQuery,state:FSMContext):
+
+@dp.callback_query(F.data == "set_reminder_time")
+async def set_reminder_time(cb: types.CallbackQuery, state: FSMContext):
     await cb.message.edit_text("Введіть час у форматі ГГ:ХХ (наприклад: 14:30) ⏰\n\nЯ буду нагадувати вам пити воду щодня в цей час!")
-    await state.set_state(rew.yui)
+    await state.set_state(WaterStates.waiting_for_reminder_time)
     await cb.answer()
-@vbn.callback_query(F.data=="zxc11")
-async def mnbvcx(cb:types.CallbackQuery):
-    user=cvb(cb.from_user.id)
-    user.yuio=False
-    user.tyui=None
-    if cb.from_user.id in sdf:
-        sdf[cb.from_user.id].cancel()
-    await cb.message.edit_text("Нагадування вимкнено! 🔕",reply_markup=qweasd())
+
+@dp.callback_query(F.data == "disable_reminder")
+async def disable_reminder(cb: types.CallbackQuery):
+    user = get_user(cb.from_user.id)
+    user.reminder_enabled = False
+    user.reminder_time = None
+    if cb.from_user.id in reminder_tasks:
+        reminder_tasks[cb.from_user.id].cancel()
+    await cb.message.edit_text("Нагадування вимкнено! 🔕", reply_markup=main_keyboard())
     await cb.answer()
-@vbn.callback_query(F.data=="zxc9")
-async def lkjhgf(cb:types.CallbackQuery):
+
+@dp.callback_query(F.data == "help")
+async def help_command(cb: types.CallbackQuery):
     try:
-        await cb.message.edit_text(f"Допомога ℹ️\n\nШвидке додавання:\n• 200 - додати 200 мл води\n• чай 300 - додати 300 мл чаю\n• кава з молоком 200 - додати 200 мл кави з молоком\n\nКнопки:\n• Швидкі об'єми води (250/500/1000/2000) 💧\n• Вибір різних напоїв 🥤\n• Статистика за сьогодні 📊\n• Досягнення 🏆\n• Нагадування ⏰\n\nНорма води: 33 мл на 1 кг ваги\nОбмеження: вага від 30 до 200 кг, максимум 2000 мл за раз\n\nКоефіцієнти напоїв:\nВода: 1.0 | Чай: 0.9 | Кава: 0.5\nСік: 0.8 | Молоко: 0.7 | Лимонад/Кола: 0.3-0.4",reply_markup=qweasd())
+        await cb.message.edit_text(f"Допомога ℹ️\n\nШвидке додавання:\n• 200 - додати 200 мл води\n• чай 300 - додати 300 мл чаю\n• кава з молоком 200 - додати 200 мл кави з молоком\n\nКнопки:\n• Швидкі об'єми води (250/500/1000/2000) 💧\n• Вибір різних напоїв 🥤\n• Статистика за сьогодні 📊\n• Досягнення 🏆\n• Нагадування ⏰\n\nНорма води: 33 мл на 1 кг ваги\nОбмеження: вага від 30 до 200 кг, максимум 2000 мл за раз\n\nКоефіцієнти напоїв:\nВода: 1.0 | Чай: 0.9 | Кава: 0.5\nСік: 0.8 | Молоко: 0.7 | Лимонад/Кола: 0.3-0.4", reply_markup=main_keyboard())
     except:
-        await cb.message.answer(f"Допомога ℹ️\n\n200 - вода\nчай 300 - чай\n\nНорма 33 мл на кг\nВага 30-200 кг\nМаксимум 2000 мл за раз",reply_markup=qweasd())
+        await cb.message.answer(f"Допомога ℹ️\n\n200 - вода\nчай 300 - чай\n\nНорма 33 мл на кг\nВага 30-200 кг\nМаксимум 2000 мл за раз", reply_markup=main_keyboard())
     await cb.answer()
-@vbn.callback_query(F.data=="wsx")
-async def qazxsw(cb:types.CallbackQuery):
+
+@dp.callback_query(F.data == "back")
+async def back(cb: types.CallbackQuery):
     try:
-        await cb.message.edit_text("Головне меню 📋",reply_markup=qweasd())
+        await cb.message.edit_text("Головне меню 📋", reply_markup=main_keyboard())
     except:
-        await cb.message.answer("Головне меню 📋",reply_markup=qweasd())
+        await cb.message.answer("Головне меню 📋", reply_markup=main_keyboard())
     await cb.answer()
+
 async def main():
     print("Бот запущений! 🤖")
     print(f"Бот: @ArtemKIPT_bot ✅")
-    await vbn.start_polling(bnm)
-if __name__=="__main__":
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
     asyncio.run(main())
